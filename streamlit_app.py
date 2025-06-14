@@ -1,138 +1,322 @@
 import streamlit as st
 import pandas as pd
 import re
+from datetime import datetime
 from io import BytesIO
-
-# ------------------------
-# 1. CHUẨN HÓA HỌ TÊN
-# ------------------------
+# ----------------------------
+# 🔧 Các hàm chuẩn hóa
+# ----------------------------
 def normalize_name(name):
-    if pd.isna(name):
-        return ""
+    if pd.isna(name): return ""
     return " ".join(str(name).strip().title().split())
 
-# ------------------------
-# 2. CHUẨN HÓA SỐ ĐIỆN THOẠI
-# ------------------------
 def normalize_phone(phone):
-    if pd.isna(phone):
-        return ""
-    phone = re.sub(r"[^\d]", "", str(phone))  # Loại ký tự không phải số
-    if phone.startswith("84"):
-        phone = "0" + phone[2:]
-    elif phone.startswith("+84"):
-        phone = "0" + phone[3:]
-    elif len(phone) == 9 and not phone.startswith("0"):
-        phone = "0" + phone
-    return phone if len(phone) == 10 and phone.startswith("0") else ""
+    if pd.isna(phone): return ""
+    phone = str(phone).strip()
+    phone = re.sub(r"[^\d]", "", phone)  # Xóa tất cả ký tự không phải số
 
-# ------------------------
-# 3. CHUẨN HÓA EMAIL
-# ------------------------
-def is_valid_email(email):
-    if pd.isna(email):
-        return False
-    email = str(email).strip().lower()
-    pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
-    return re.match(pattern, email)
+    if phone.startswith("0084"):
+        phone = phone[4:]
+    elif phone.startswith("084"):
+        phone = phone[3:]
+    elif phone.startswith("84"):
+        phone = phone[2:]
+    elif phone.startswith("0"):
+        phone = phone[1:]
+
+    return phone if len(phone) == 9 else ""
 
 def normalize_email(email):
+    if pd.isna(email): return ""
     email = str(email).strip().lower()
-    return email if is_valid_email(email) else ""
+    pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+    return email if re.match(pattern, email) else ""
 
-# ------------------------
-# 4. LOẠI TRÙNG VỚI DATA TỔNG
-# ------------------------
-def remove_duplicates(df_new, df_total):
-    phones_total = df_total['SĐT'].astype(str).dropna().apply(normalize_phone).unique()
-    emails_total = df_total['Email'].astype(str).dropna().apply(normalize_email).unique()
+def normalize_date(date):
+    try:
+        if pd.isna(date): return ""
+        parsed = pd.to_datetime(date, errors="coerce")
+        if pd.isna(parsed): return ""
+        return parsed.strftime("%d/%m/%Y")
+    except:
+        return ""
 
-    def is_duplicate(row):
-        phone = normalize_phone(row['Phone'])
-        email = normalize_email(row['Email'])
-        return (phone in phones_total) or (email and email in emails_total)
+# ----------------------------
+# 🚀 Giao diện Streamlit
+# ----------------------------
+st.title("🧼 Chuẩn hóa & Thống kê dữ liệu")
 
-    df_filtered = df_new[~df_new.apply(is_duplicate, axis=1)].copy()
-    return df_filtered
+uploaded_file = st.file_uploader("📂 Tải file Excel (.xlsx)", type=["xlsx"])
 
-# ------------------------
-# 5. CHIA ĐỀU TV - CS
-# ------------------------
-def assign_staff(df, tv_list, cs_list):
-    tv_len = len(tv_list)
-    cs_len = len(cs_list)
-    df = df.reset_index(drop=True)
-    df["TV"] = [tv_list[i % tv_len] for i in range(len(df))] if tv_len else ""
-    df["CS"] = [cs_list[i % cs_len] for i in range(len(df))] if cs_len else ""
-    return df
+if uploaded_file is not None:
+    try:
+        # Đọc sheet tên "DATA" và ép kiểu về chuỗi để xử lý ổn định
+        df_full = pd.read_excel(uploaded_file, sheet_name="DATA", header=None, dtype=str)
+        df_data = df_full.iloc[1:].reset_index(drop=True)  # Bỏ dòng tiêu đề
 
-# ------------------------
-# 6. TẢI FILE DƯỚI DẠNG EXCEL
-# ------------------------
-def to_excel(df):
-    output = BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, sheet_name='Processed Data')
-    processed_data = output.getvalue()
-    return processed_data
+        # ----------------------------
+        # 🧩 Vị trí cột trong Excel (theo index)
+        # ----------------------------
+        col_stt = 0
+        col_name = 3       # Họ tên KH
+        col_phone = 4      # SĐT
+        col_email = 6      # Email
+        col_date = 8       # Ngày đăng ký
 
-# ------------------------
-# 7. GIAO DIỆN STREAMLIT
-# ------------------------
-st.set_page_config(page_title="Data MRT Processor", layout="wide")
-st.title("📊 Ứng dụng Xử lý Dữ liệu MRT")
+        # ✅ Chuẩn hóa dữ liệu
+        df_data[col_name] = df_data[col_name].apply(normalize_name)
+        df_data[col_phone] = df_data[col_phone].apply(normalize_phone)
+        df_data[col_email] = df_data[col_email].apply(normalize_email)
+        df_data[col_date] = df_data[col_date].apply(normalize_date)
 
-st.markdown("""
-### 📝 Hướng dẫn:
-1. **Tải lên** file dữ liệu mới (`Data_MRT.xlsx`) và file dữ liệu tổng (`DATA_TONG.xlsx`).
-2. **Nhập** danh sách tên nhân viên TV và CS, cách nhau bởi dấu phẩy.
-3. **Nhấn nút** "Xử lý dữ liệu" để bắt đầu quá trình xử lý.
-4. **Tải xuống** file kết quả sau khi xử lý.
-""")
+        st.success("✅ Dữ liệu đã được chuẩn hóa")
+        st.subheader("👁️ Dữ liệu mẫu sau chuẩn hóa:")
+        # st.dataframe(df_data[[col_stt, col_name, col_phone, col_email, col_date]].head(10), use_container_width=True)
+        st.dataframe(df_data, use_container_width=True)
 
-# Tải lên file dữ liệu mới
-uploaded_new_file = st.file_uploader("📤 Tải lên file dữ liệu mới (Data_MRT.xlsx)", type=["xlsx"], key="new_file")
 
-# Tải lên file dữ liệu tổng
-uploaded_total_file = st.file_uploader("📤 Tải lên file dữ liệu tổng (DATA_TONG.xlsx)", type=["xlsx"], key="total_file")
+        # # 📊 Thống kê kết quả
+        # total_rows = len(df_data)
 
-# Nhập danh sách nhân viên TV và CS
-tv_input = st.text_input("👥 Nhập danh sách nhân viên TV (cách nhau bởi dấu phẩy):", "")
-cs_input = st.text_input("👥 Nhập danh sách nhân viên CS (cách nhau bởi dấu phẩy):", "")
+        # valid_phones = df_data[df_data[col_phone] != ""]
+        # invalid_phones = total_rows - len(valid_phones)
 
-# Nút xử lý dữ liệu
-if st.button("🚀 Xử lý dữ liệu"):
-    if uploaded_new_file is None:
-        st.warning("Vui lòng tải lên file dữ liệu mới.")
-    elif uploaded_total_file is None:
-        st.warning("Vui lòng tải lên file dữ liệu tổng.")
-    else:
-        # Đọc dữ liệu từ các file Excel
-        df_new = pd.read_excel(uploaded_new_file)
-        df_total = pd.read_excel(uploaded_total_file)
+        # valid_emails = df_data[df_data[col_email] != ""]
+        # invalid_emails = total_rows - len(valid_emails)
 
-        # Chuẩn hóa dữ liệu mới
-        df_new['User'] = df_new['User'].apply(normalize_name)
-        df_new['Phone'] = df_new['Phone'].apply(normalize_phone)
-        df_new['Email'] = df_new['Email'].apply(normalize_email)
+        # st.subheader("📈 Thống kê dữ liệu")
+        # st.markdown(f"""
+        # 📄 **Tổng số dòng dữ liệu:** {total_rows}
 
-        # Loại bỏ các dòng trùng lặp
-        df_filtered = remove_duplicates(df_new, df_total)
+        # 📞 **SĐT hợp lệ duy nhất:** {valid_phones[col_phone].nunique()}
 
-        # Phân chia nhân viên TV và CS
-        tv_list = [name.strip() for name in tv_input.split(',') if name.strip()]
-        cs_list = [name.strip() for name in cs_input.split(',') if name.strip()]
-        df_assigned = assign_staff(df_filtered, tv_list, cs_list)
+        # ❌ **SĐT lỗi hoặc thiếu:** {invalid_phones} dòng
 
-        # Hiển thị dữ liệu đã xử lý
-        st.success(f"✅ Đã xử lý {len(df_assigned)} dòng dữ liệu sau khi loại bỏ trùng lặp và phân chia nhân viên.")
-        st.dataframe(df_assigned)
+        # ✉️ **Email hợp lệ duy nhất:** {valid_emails[col_email].nunique()}
 
-        # Tải xuống file kết quả
-        processed_file = to_excel(df_assigned)
+        # ❌ **Email lỗi hoặc thiếu:** {invalid_emails} dòng
+        # """)
+
+        # st.subheader("👁️ Dữ liệu mẫu sau chuẩn hóa:")
+        # st.dataframe(df_data[[col_stt, col_name, col_phone, col_email, col_date]].head(15))
+        # ----------------------------
+        # 📊 Thống kê
+        # ----------------------------
+        total_rows = len(df_data)
+
+        valid_phones = df_data[df_data[col_phone] != ""]
+        valid_emails = df_data[df_data[col_email] != ""]
+
+        # Trùng SĐT
+        duplicate_phones = valid_phones[valid_phones.duplicated(subset=col_phone, keep=False)]
+        duplicate_phone_values = duplicate_phones[col_phone].nunique()
+        duplicate_phone_rows = len(duplicate_phones)
+
+        # Trùng Email
+        duplicate_emails = valid_emails[valid_emails.duplicated(subset=col_email, keep=False)]
+        duplicate_email_values = duplicate_emails[col_email].nunique()
+        duplicate_email_rows = len(duplicate_emails)
+
+        st.subheader("📈 Thống kê dữ liệu")
+        st.markdown(f"""
+        📄 **Tổng số dòng dữ liệu:** {total_rows}
+
+        📞 **SĐT hợp lệ và không bị trống:** {valid_phones[col_phone].nunique()}
+        - 🔁 Trong đó: **{duplicate_phone_values} số bị trùng** (xuất hiện nhiều hơn 1 lần)
+        - 📄 Tổng cộng **{duplicate_phone_rows} dòng** chứa số trùng
+        - ✅ **{valid_phones[col_phone].nunique() - duplicate_phone_values} số là duy nhất**
+
+        ✉️ **Email hợp lệ và không bị trống:** {valid_emails[col_email].nunique()}
+        - 🔁 Trong đó: **{duplicate_email_values} email bị trùng**
+        - 📄 Tổng cộng **{duplicate_email_rows} dòng** chứa email trùng
+        - ✅ **{valid_emails[col_email].nunique() - duplicate_email_values} email là duy nhất**
+        """)
+
+
+        # ----------------------------
+        # 🔁 Kiểm tra dữ liệu trùng (gộp chung)
+        # ----------------------------
+        st.subheader("🔁 Kiểm tra dữ liệu trùng")
+
+        # 📞 Trùng SĐT
+        duplicate_phone_series = df_data[col_phone].value_counts()
+        duplicated_phones = duplicate_phone_series[duplicate_phone_series > 1].index.tolist()
+        df_duplicated_phones = df_data[df_data[col_phone].isin(duplicated_phones)][[col_stt, col_name, col_phone, col_email, col_date]]
+
+        st.markdown(f"🔢 **SĐT bị trùng:** {len(duplicated_phones)} số – {len(df_duplicated_phones)} dòng")
+        with st.expander("📞 Xem các dòng trùng SĐT"):
+            st.dataframe(df_duplicated_phones.sort_values(by=col_phone), use_container_width=True)
+
+        # 📧 Trùng Email
+        duplicate_email_series = df_data[col_email].value_counts()
+        duplicated_emails = duplicate_email_series[duplicate_email_series > 1].index.tolist()
+        df_duplicated_emails = df_data[df_data[col_email].isin(duplicated_emails)][[col_stt, col_name, col_phone, col_email, col_date]]
+
+        st.markdown(f"📨 **Email bị trùng:** {len(duplicated_emails)} email – {len(df_duplicated_emails)} dòng")
+        with st.expander("✉️ Xem các dòng trùng Email"):
+            st.dataframe(df_duplicated_emails.sort_values(by=col_email), use_container_width=True)
+
+                # ----------------------------
+        # 🧹 Xác định & ghi lý do bị xóa rõ ràng kèm dòng STT gốc
+        # ----------------------------
+        st.subheader("🧹 Xóa dữ liệu trùng & Ghi rõ lý do")
+
+        # Tạo từ điển: giá trị trùng → STT dòng giữ lại (đầu tiên)
+        first_phone_map = df_data[~df_data.duplicated(subset=col_phone, keep="first") & (df_data[col_phone] != "")].set_index(col_phone)[col_stt].to_dict()
+        first_email_map = df_data[~df_data.duplicated(subset=col_email, keep="first") & (df_data[col_email] != "")].set_index(col_email)[col_stt].to_dict()
+
+        # Ghi lý do xóa cho từng dòng
+        removal_reason = []
+        for idx, row in df_data.iterrows():
+            phone = row[col_phone]
+            email = row[col_email]
+            stt = row[col_stt]
+
+            phone_dup = df_data.duplicated(subset=col_phone, keep="first")[idx] and phone != ""
+            email_dup = df_data.duplicated(subset=col_email, keep="first")[idx] and email != ""
+
+            reason = ""
+            if phone_dup and email_dup:
+                reason = f"Trùng SĐT với dòng {first_phone_map.get(phone)} & Trùng Email với dòng {first_email_map.get(email)}"
+            elif phone_dup:
+                reason = f"Trùng SĐT với dòng {first_phone_map.get(phone)}"
+            elif email_dup:
+                reason = f"Trùng Email với dòng {first_email_map.get(email)}"
+            
+            removal_reason.append(reason)
+
+        df_data["🔍 Lý do xóa"] = removal_reason
+
+        # Phân tách
+        df_removed = df_data[df_data["🔍 Lý do xóa"] != ""].copy()
+        df_cleaned = df_data[df_data["🔍 Lý do xóa"] == ""].drop(columns=["🔍 Lý do xóa"]).reset_index(drop=True)
+
+        # Thống kê
+        st.success(f"🧹 Đã lọc {len(df_removed)} dòng bị trùng.")
+
+        # Hiển thị bảng các dòng đã bị loại bỏ
+        with st.expander("🗑️ Xem các dòng đã bị xóa (vì trùng)"):
+            st.dataframe(df_removed[[col_stt, col_name, col_phone, col_email, col_date, "🔍 Lý do xóa"]], use_container_width=True)
+
+        @st.cache_data
+        def to_excel_bytes(df):
+            from io import BytesIO
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+                df.to_excel(writer, sheet_name="Da_Xoa", index=False)
+            return output.getvalue()
+
+        # Tải dòng đã xóa
         st.download_button(
-            label="📥 Tải xuống file kết quả",
-            data=processed_file,
-            file_name="Data_MRT_Processed.xlsx",
+            label="📥 Tải các dòng đã xóa (có lý do)",
+            data=to_excel_bytes(df_removed),
+            file_name="dong_bi_xoa_vi_trung_co_ly_do.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+
+
+        # ----------------------------
+        # 📤 Hiển thị & Tải dữ liệu sau khi lọc
+        # ----------------------------
+        st.subheader("📄 Dữ liệu sau khi đã lọc trùng (Sạch):")
+
+        # 👉 Bộ lọc theo ngày đăng ký
+        df_cleaned[col_date] = pd.to_datetime(df_cleaned[col_date], format="%d/%m/%Y", errors="coerce")
+
+        min_date = df_cleaned[col_date].min()
+        max_date = df_cleaned[col_date].max()
+
+        if pd.isna(min_date) or pd.isna(max_date):
+            st.warning("⚠️ Không thể lọc theo ngày vì dữ liệu ngày không đầy đủ.")
+            df_filtered = df_cleaned
+        else:
+            start_date, end_date = st.date_input("📅 Chọn khoảng ngày đăng ký", [min_date, max_date])
+            st.markdown(f"🗓️ Bạn đã chọn: **{start_date.strftime('%d/%m/%Y')} – {end_date.strftime('%d/%m/%Y')}**")
+            df_filtered = df_cleaned[(df_cleaned[col_date] >= pd.to_datetime(start_date)) & 
+                                    (df_cleaned[col_date] <= pd.to_datetime(end_date))]
+
+        # ✅ Hiển thị preview
+        df_display = df_filtered.copy()
+        df_display[col_date] = df_display[col_date].dt.strftime("%d/%m/%Y")
+        st.dataframe(df_display[[col_stt, col_name, col_phone, col_email, col_date]], use_container_width=True)
+
+
+
+        # 👉 Tải dữ liệu sạch (đã lọc theo ngày nếu có)
+        st.download_button(
+            label="📁 Tải dữ liệu sau khi lọc và filter",
+            data=to_excel_bytes(df_filtered),
+            file_name="du_lieu_sach.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+                # Tải dữ liệu sạch
+        st.download_button(
+            label="📁 Tải tất cả dữ liệu",
+            data=to_excel_bytes( df_cleaned),
+            file_name="du_lieu_sach.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        # # Tải dữ liệu sạch
+        # st.download_button(
+        #     label="📁 Tải dữ liệu sau khi lọc",
+        #     data=to_excel_bytes( df_cleaned),
+        #     file_name="du_lieu_sach.xlsx",
+        #     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        # )
+
+
+
+        st.subheader("📋 Chia đều dòng cho từng người")
+
+ 
+        # 👉 Nhập số dòng và tên
+        num_rows = st.number_input("🔢 Nhập số dòng cần chia", min_value=1, step=1)
+        names_input = st.text_area("👥 Nhập danh sách tên (ngăn cách bởi dấu phẩy hoặc xuống dòng)", height=150)
+
+        # 👉 Xử lý danh sách tên
+        def parse_names(text):
+            return [n.strip().title() for n in text.replace("\n", ",").split(",") if n.strip()]
+
+        names = parse_names(names_input)
+
+        # 👉 Khi bấm nút
+        if st.button("🔁 Chia dữ liệu") and names:
+            base = num_rows // len(names)
+            extra = num_rows % len(names)
+
+            # Tạo danh sách chia đều
+            grouped_list = []
+            for i, name in enumerate(names):
+                count = base + (1 if i < extra else 0)
+                grouped_list.extend([name] * count)
+
+            # Kết quả dạng bảng
+            result_df = pd.DataFrame(grouped_list, columns=["Tên"])
+            st.success(f"✅ Đã chia {num_rows} dòng cho {len(names)} người theo nhóm")
+
+            # 📋 Hiển thị bảng
+            st.dataframe(result_df, use_container_width=True)
+
+            # 📤 Tải Excel
+            def to_excel_bytes(df):
+                output = BytesIO()
+                with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+                    df.to_excel(writer, index=False, sheet_name="Chia_Ten")
+                return output.getvalue()
+
+            st.download_button(
+                label="📥 Tải file Excel",
+                data=to_excel_bytes(result_df),
+                file_name="chia_theo_nhom.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+            # 📋 Copy để dán vào Excel
+            text_output = "\n".join(grouped_list)
+            st.text_area("📋 Copy danh sách này và dán vào Excel", value=text_output, height=300)
+
+    except Exception as e:
+        st.error(f"❌ Lỗi khi xử lý file: {e}")
+
+
+
