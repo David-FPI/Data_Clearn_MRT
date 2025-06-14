@@ -268,56 +268,56 @@ if uploaded_file is not None:
         # )
 
 
-
         st.subheader("📋 Chia đều dòng cho từng người")
 
- 
-        # 👉 Nhập số dòng và tên
-        num_rows = st.number_input("🔢 Nhập số dòng cần chia", min_value=1, step=1)
-        names_input = st.text_area("👥 Nhập danh sách tên (ngăn cách bởi dấu phẩy hoặc xuống dòng)", height=150)
+         # 👉 Nhập số dòng và tên (không kích hoạt xử lý ngay)
+        with st.form("form_chia_dong"):
+            num_rows = st.number_input("🔢 Nhập số dòng cần chia", min_value=1, step=1, key="num_rows_input")
+            names_input = st.text_area("👥 Nhập danh sách tên (ngăn cách bởi dấu phẩy hoặc xuống dòng)", height=150, key="names_input_area")
+            submit_button = st.form_submit_button("🔁 Chia dữ liệu")
 
-        # 👉 Xử lý danh sách tên
-        def parse_names(text):
-            return [n.strip().title() for n in text.replace("\n", ",").split(",") if n.strip()]
+        if submit_button:
+            # 👉 Xử lý danh sách tên
+            def parse_names(text):
+                return [n.strip().title() for n in text.replace("\n", ",").split(",") if n.strip()]
+            
+            names = parse_names(names_input)
 
-        names = parse_names(names_input)
+            if not names:
+                st.warning("⚠️ Vui lòng nhập ít nhất 1 tên.")
+            elif num_rows < len(names):
+                st.warning(f"⚠️ Số dòng ({num_rows}) nhỏ hơn số người ({len(names)}), không thể chia đều.")
+            else:
+                base = num_rows // len(names)
+                extra = num_rows % len(names)
 
-        # 👉 Khi bấm nút
-        if st.button("🔁 Chia dữ liệu") and names:
-            base = num_rows // len(names)
-            extra = num_rows % len(names)
+                grouped_list = []
+                for i, name in enumerate(names):
+                    count = base + (1 if i < extra else 0)
+                    grouped_list.extend([name] * count)
 
-            # Tạo danh sách chia đều
-            grouped_list = []
-            for i, name in enumerate(names):
-                count = base + (1 if i < extra else 0)
-                grouped_list.extend([name] * count)
+                result_df = pd.DataFrame(grouped_list, columns=["Tên"])
+                st.success(f"✅ Đã chia {num_rows} dòng cho {len(names)} người theo nhóm")
 
-            # Kết quả dạng bảng
-            result_df = pd.DataFrame(grouped_list, columns=["Tên"])
-            st.success(f"✅ Đã chia {num_rows} dòng cho {len(names)} người theo nhóm")
+                st.dataframe(result_df, use_container_width=True)
 
-            # 📋 Hiển thị bảng
-            st.dataframe(result_df, use_container_width=True)
+                # 📥 Tải Excel
+                def to_excel_bytes(df):
+                    output = BytesIO()
+                    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+                        df.to_excel(writer, index=False, sheet_name="Chia_Ten")
+                    return output.getvalue()
 
-            # 📤 Tải Excel
-            def to_excel_bytes(df):
-                output = BytesIO()
-                with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-                    df.to_excel(writer, index=False, sheet_name="Chia_Ten")
-                return output.getvalue()
+                st.download_button(
+                    label="📥 Tải file Excel",
+                    data=to_excel_bytes(result_df),
+                    file_name="chia_theo_nhom.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
 
-            st.download_button(
-                label="📥 Tải file Excel",
-                data=to_excel_bytes(result_df),
-                file_name="chia_theo_nhom.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-
-            # 📋 Copy để dán vào Excel
-            text_output = "\n".join(grouped_list)
-            st.text_area("📋 Copy danh sách này và dán vào Excel", value=text_output, height=300)
-                # 👉 Thêm nút "Sao chép vào clipboard"
+                # 📋 Copy để dán vào Excel
+                text_output = "\n".join(grouped_list)
+                st.text_area("📋 Copy danh sách này và dán vào Excel", value=text_output, height=300)
 
 
                 components.html(f"""
@@ -332,6 +332,9 @@ if uploaded_file is not None:
                         font-weight: bold;
                     ">📋 Sao chép vào clipboard</button>
                 """, height=50)
+
+
+    
     except Exception as e:
         st.error(f"❌ Lỗi khi xử lý file: {e}")
 
