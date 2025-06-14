@@ -268,6 +268,8 @@ if uploaded_file is not None:
         # )
 
 
+    
+
         st.subheader("📋 Chia đều dòng cho từng người")
 
          # 👉 Nhập số dòng và tên (không kích hoạt xử lý ngay)
@@ -332,6 +334,7 @@ if uploaded_file is not None:
                         font-weight: bold;
                     ">📋 Sao chép vào clipboard</button>
                 """, height=50)
+
 
 
     
