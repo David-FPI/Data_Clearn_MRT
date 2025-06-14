@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import re
+import streamlit.components.v1 as components
 from datetime import datetime
 from io import BytesIO
 
@@ -316,7 +317,21 @@ if uploaded_file is not None:
             # 📋 Copy để dán vào Excel
             text_output = "\n".join(grouped_list)
             st.text_area("📋 Copy danh sách này và dán vào Excel", value=text_output, height=300)
+                # 👉 Thêm nút "Sao chép vào clipboard"
 
+
+                components.html(f"""
+                    <button onclick="navigator.clipboard.writeText(`{text_output}`)" style="
+                        background-color: #4CAF50;
+                        color: white;
+                        padding: 8px 16px;
+                        margin-top: 10px;
+                        border: none;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-weight: bold;
+                    ">📋 Sao chép vào clipboard</button>
+                """, height=50)
     except Exception as e:
         st.error(f"❌ Lỗi khi xử lý file: {e}")
 
