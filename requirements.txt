@@ -2,3 +2,6 @@ streamlit
 pandas
 openpyxl
 xlsxwriter
+re
+io 
+pandas 
