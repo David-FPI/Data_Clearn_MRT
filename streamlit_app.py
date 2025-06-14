@@ -3,6 +3,11 @@ import pandas as pd
 import re
 from datetime import datetime
 from io import BytesIO
+
+# ----------------------------
+# 🚀 Giao diện Streamlit
+# ----------------------------
+st.title("🧼 Chuẩn hóa & Thống kê dữ liệu")
 # ----------------------------
 # 🔧 Các hàm chuẩn hóa
 # ----------------------------
@@ -41,10 +46,7 @@ def normalize_date(date):
     except:
         return ""
 
-# ----------------------------
-# 🚀 Giao diện Streamlit
-# ----------------------------
-st.title("🧼 Chuẩn hóa & Thống kê dữ liệu")
+
 
 uploaded_file = st.file_uploader("📂 Tải file Excel (.xlsx)", type=["xlsx"])
 
