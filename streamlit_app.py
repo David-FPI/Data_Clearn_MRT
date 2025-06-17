@@ -16,21 +16,29 @@ def normalize_name(name):
     if pd.isna(name): return ""
     return " ".join(str(name).strip().title().split())
 
-def normalize_phone(phone):
-    if pd.isna(phone): return ""
-    phone = str(phone).strip()
-    phone = re.sub(r"[^\d]", "", phone)  # Xóa tất cả ký tự không phải số
 
+def normalize_phone(phone):
+    if pd.isna(phone):
+        return ""
+
+    # Bước 1: Làm sạch các ký tự thừa như =, +, khoảng trắng, dấu gạch nối, v.v.
+    phone = str(phone).strip()
+    phone = phone.replace("=", "").replace("+", "")
+    phone = re.sub(r"[^\d]", "", phone)  # Giữ lại chỉ các chữ số
+
+    # Bước 2: Xử lý đầu số quốc tế và loại bỏ số 0 đầu
     if phone.startswith("0084"):
         phone = phone[4:]
-    elif phone.startswith("084"):
-        phone = phone[3:]
-    elif phone.startswith("84"):
+    elif phone.startswith("84") and len(phone) > 9:
         phone = phone[2:]
     elif phone.startswith("0"):
         phone = phone[1:]
 
-    return phone if len(phone) == 9 else ""
+    # Bước 3: Trả về nếu đủ 9 số
+    if len(phone) == 9 and phone.isdigit():
+        return phone
+    else:
+        return ""  # Số không hợp lệ
 
 def normalize_email(email):
     if pd.isna(email): return ""
