@@ -86,33 +86,6 @@ if uploaded_file is not None:
         st.dataframe(df_data, use_container_width=True)
 
 
-        # # 📊 Thống kê kết quả
-        # total_rows = len(df_data)
-
-        # valid_phones = df_data[df_data[col_phone] != ""]
-        # invalid_phones = total_rows - len(valid_phones)
-
-        # valid_emails = df_data[df_data[col_email] != ""]
-        # invalid_emails = total_rows - len(valid_emails)
-
-        # st.subheader("📈 Thống kê dữ liệu")
-        # st.markdown(f"""
-        # 📄 **Tổng số dòng dữ liệu:** {total_rows}
-
-        # 📞 **SĐT hợp lệ duy nhất:** {valid_phones[col_phone].nunique()}
-
-        # ❌ **SĐT lỗi hoặc thiếu:** {invalid_phones} dòng
-
-        # ✉️ **Email hợp lệ duy nhất:** {valid_emails[col_email].nunique()}
-
-        # ❌ **Email lỗi hoặc thiếu:** {invalid_emails} dòng
-        # """)
-
-        # st.subheader("👁️ Dữ liệu mẫu sau chuẩn hóa:")
-        # st.dataframe(df_data[[col_stt, col_name, col_phone, col_email, col_date]].head(15))
-        # ----------------------------
-        # 📊 Thống kê
-        # ----------------------------
         total_rows = len(df_data)
 
         valid_phones = df_data[df_data[col_phone] != ""]
