@@ -151,7 +151,7 @@ if uploaded_file is not None:
         col_name = 3       # Họ tên KH
         col_phone = 4      # SĐT
         col_email = 9          # Email
-        col_date = 10       # Ngày đăng ký
+        col_date = 11       # Ngày đăng ký
 
         # ✅ Chuẩn hóa dữ liệu
         df_data[col_name] = df_data[col_name].apply(normalize_name)
