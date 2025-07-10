@@ -31,47 +31,70 @@ COUNTRY_CODES = {
     '66': 'Thailand',
 }
 
+# Bản đồ chuyển đổi đầu số cũ ➜ đầu số mới tại Việt Nam
+VIETNAM_OLD_PREFIX_MAP = {
+    '0162': '032', '0163': '033', '0164': '034',
+    '0165': '035', '0166': '036', '0167': '037',
+    '0168': '038', '0169': '039',
+    '0120': '070', '0121': '079', '0122': '077',
+    '0126': '076', '0128': '078',
+    '0123': '083', '0124': '084', '0125': '085',
+    '0127': '081', '0129': '082',
+    '0186': '056', '0188': '058',
+    '0199': '059'
+}
+
 def normalize_phone(phone):
     if pd.isna(phone):
         return None
-
-    # Làm sạch ký tự đặc biệt, chỉ giữ số và dấu +
     phone = str(phone).strip()
+    phone = phone.replace('O', '0').replace('o', '0') 
     phone = re.sub(r'[^\d+]', '', phone)
+    phone = phone.replace("’", "").replace("‘", "")  # loại bỏ dấu lạ
+    phone = phone.lstrip("=+'\"")  # loại bỏ các ký tự dính từ Excel
 
-    # 1️⃣ Xử lý số Việt Nam bắt đầu bằng +84 hoặc 84
+    if phone.startswith('00'):
+        phone = '+' + phone[2:]
+
+    # 🔄 Nếu số bắt đầu bằng 84 và đủ dài → thêm lại tiền tố 0 để trigger map đầu số cũ
+    if phone.startswith('84') and len(phone) >= 11:
+        phone = '0' + phone[2:]
+
+    # 🔁 Chuyển đầu số cũ sang đầu số mới nếu có
+    for old_prefix, new_prefix in VIETNAM_OLD_PREFIX_MAP.items():
+        if phone.startswith(old_prefix) and len(phone) == 11:
+            phone = new_prefix + phone[4:]
+            break
+
+    # 🇻🇳 Chuẩn hóa +84 ➜ 0
     if phone.startswith('+84'):
         phone = '0' + phone[3:]
     elif phone.startswith('84') and len(phone) in [10, 11]:
         phone = '0' + phone[2:]
 
-    # 2️⃣ Nếu giờ là số Việt Nam:
-    # - Di động: 10 số, bắt đầu từ 03-09
-    # - Bàn: 11 số, bắt đầu từ 02
+    # ✅ Check số Việt Nam (di động & bàn)
     if (phone.startswith('02') and len(phone) == 11) or \
        (phone.startswith(('03', '04', '05', '06', '07', '08', '09')) and len(phone) == 10):
         return phone
 
-    # 3️⃣ Nếu có 9 số và bắt đầu từ 3–9 → thêm 0 rồi kiểm tra lại
+    # 📦 Nếu 9 số, thêm 0 rồi thử lại
     if len(phone) == 9 and phone[0] in '3456789':
         phone = '0' + phone
         if (phone.startswith('02') and len(phone) == 11) or \
            (phone.startswith(('03', '04', '05', '06', '07', '08', '09')) and len(phone) == 10):
             return phone
 
-    # 4️⃣ Nếu có dấu + → xử lý bằng thư viện phonenumbers
+    # 🌍 Xử lý số quốc tế dạng +...
     if phone.startswith('+'):
         try:
             parsed = phonenumbers.parse(phone, None)
             if phonenumbers.is_valid_number(parsed):
                 country = geocoder.description_for_number(parsed, 'en')
-                if parsed.country_code == 84:
-                    return None  # Không trả về số Việt Nam dạng +84 nữa
                 return f"{phone} / {country}"
         except:
             return None
 
-    # 5️⃣ Nếu không có dấu + nhưng bắt đầu bằng mã quốc gia → thêm +
+    # ➕ Nếu không có dấu + nhưng là mã quốc gia
     for code in sorted(COUNTRY_CODES.keys(), key=lambda x: -len(x)):
         if phone.startswith(code) and len(phone) >= len(code) + 7:
             fake_plus = '+' + phone
@@ -79,14 +102,67 @@ def normalize_phone(phone):
                 parsed = phonenumbers.parse(fake_plus, None)
                 if phonenumbers.is_valid_number(parsed):
                     country = geocoder.description_for_number(parsed, 'en')
-                    if parsed.country_code == 84:
-                        return None
                     return f"{fake_plus} / {country}"
             except:
                 continue
-
     # ❌ Không hợp lệ
     return None
+# def normalize_phone(phone):
+#     if pd.isna(phone):
+#         return None
+
+#     # Làm sạch ký tự đặc biệt, chỉ giữ số và dấu +
+#     phone = str(phone).strip()
+#     phone = re.sub(r'[^\d+]', '', phone)
+
+#     # 1️⃣ Xử lý số Việt Nam bắt đầu bằng +84 hoặc 84
+#     if phone.startswith('+84'):
+#         phone = '0' + phone[3:]
+#     elif phone.startswith('84') and len(phone) in [10, 11]:
+#         phone = '0' + phone[2:]
+
+#     # 2️⃣ Nếu giờ là số Việt Nam:
+#     # - Di động: 10 số, bắt đầu từ 03-09
+#     # - Bàn: 11 số, bắt đầu từ 02
+#     if (phone.startswith('02') and len(phone) == 11) or \
+#        (phone.startswith(('03', '04', '05', '06', '07', '08', '09')) and len(phone) == 10):
+#         return phone
+
+#     # 3️⃣ Nếu có 9 số và bắt đầu từ 3–9 → thêm 0 rồi kiểm tra lại
+#     if len(phone) == 9 and phone[0] in '3456789':
+#         phone = '0' + phone
+#         if (phone.startswith('02') and len(phone) == 11) or \
+#            (phone.startswith(('03', '04', '05', '06', '07', '08', '09')) and len(phone) == 10):
+#             return phone
+
+#     # 4️⃣ Nếu có dấu + → xử lý bằng thư viện phonenumbers
+#     if phone.startswith('+'):
+#         try:
+#             parsed = phonenumbers.parse(phone, None)
+#             if phonenumbers.is_valid_number(parsed):
+#                 country = geocoder.description_for_number(parsed, 'en')
+#                 if parsed.country_code == 84:
+#                     return None  # Không trả về số Việt Nam dạng +84 nữa
+#                 return f"{phone} / {country}"
+#         except:
+#             return None
+
+#     # 5️⃣ Nếu không có dấu + nhưng bắt đầu bằng mã quốc gia → thêm +
+#     for code in sorted(COUNTRY_CODES.keys(), key=lambda x: -len(x)):
+#         if phone.startswith(code) and len(phone) >= len(code) + 7:
+#             fake_plus = '+' + phone
+#             try:
+#                 parsed = phonenumbers.parse(fake_plus, None)
+#                 if phonenumbers.is_valid_number(parsed):
+#                     country = geocoder.description_for_number(parsed, 'en')
+#                     if parsed.country_code == 84:
+#                         return None
+#                     return f"{fake_plus} / {country}"
+#             except:
+#                 continue
+
+#     # ❌ Không hợp lệ
+#     return None
 
 
 
