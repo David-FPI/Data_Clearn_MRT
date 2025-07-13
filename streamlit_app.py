@@ -218,16 +218,16 @@ if uploaded_file is not None:
     try:
         # Đọc sheet tên "DATA" và ép kiểu về chuỗi để xử lý ổn định
         df_full = pd.read_excel(uploaded_file, sheet_name="DATA", header=None, dtype=str)
-        df_data = df_full.iloc[1:].reset_index(drop=True)  # Bỏ dòng tiêu đề
+        df_data = df_full.iloc[1:].reset_index(drop=True)  # Bỏ dòng tiêu đề đầu tiên
 
         # ----------------------------
         # 🧩 Vị trí cột trong Excel (theo index)
         # ----------------------------
         col_stt = 0
-        col_name = 3       # Họ tên KH
-        col_phone = 4      # SĐT
+        col_name = 4      # Họ tên KH
+        col_phone = 5      # SĐT
         col_email = 6          # Email
-        col_date = 8       # Ngày đăng ký
+        col_date = 1       # Ngày đăng ký
 
         # ✅ Chuẩn hóa dữ liệu
         df_data[col_name] = df_data[col_name].apply(normalize_name)
