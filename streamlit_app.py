@@ -107,88 +107,10 @@ def normalize_phone(phone):
                 continue
     # ❌ Không hợp lệ
     return None
-# def normalize_phone(phone):
-#     if pd.isna(phone):
-#         return None
-
-#     # Làm sạch ký tự đặc biệt, chỉ giữ số và dấu +
-#     phone = str(phone).strip()
-#     phone = re.sub(r'[^\d+]', '', phone)
-
-#     # 1️⃣ Xử lý số Việt Nam bắt đầu bằng +84 hoặc 84
-#     if phone.startswith('+84'):
-#         phone = '0' + phone[3:]
-#     elif phone.startswith('84') and len(phone) in [10, 11]:
-#         phone = '0' + phone[2:]
-
-#     # 2️⃣ Nếu giờ là số Việt Nam:
-#     # - Di động: 10 số, bắt đầu từ 03-09
-#     # - Bàn: 11 số, bắt đầu từ 02
-#     if (phone.startswith('02') and len(phone) == 11) or \
-#        (phone.startswith(('03', '04', '05', '06', '07', '08', '09')) and len(phone) == 10):
-#         return phone
-
-#     # 3️⃣ Nếu có 9 số và bắt đầu từ 3–9 → thêm 0 rồi kiểm tra lại
-#     if len(phone) == 9 and phone[0] in '3456789':
-#         phone = '0' + phone
-#         if (phone.startswith('02') and len(phone) == 11) or \
-#            (phone.startswith(('03', '04', '05', '06', '07', '08', '09')) and len(phone) == 10):
-#             return phone
-
-#     # 4️⃣ Nếu có dấu + → xử lý bằng thư viện phonenumbers
-#     if phone.startswith('+'):
-#         try:
-#             parsed = phonenumbers.parse(phone, None)
-#             if phonenumbers.is_valid_number(parsed):
-#                 country = geocoder.description_for_number(parsed, 'en')
-#                 if parsed.country_code == 84:
-#                     return None  # Không trả về số Việt Nam dạng +84 nữa
-#                 return f"{phone} / {country}"
-#         except:
-#             return None
-
-#     # 5️⃣ Nếu không có dấu + nhưng bắt đầu bằng mã quốc gia → thêm +
-#     for code in sorted(COUNTRY_CODES.keys(), key=lambda x: -len(x)):
-#         if phone.startswith(code) and len(phone) >= len(code) + 7:
-#             fake_plus = '+' + phone
-#             try:
-#                 parsed = phonenumbers.parse(fake_plus, None)
-#                 if phonenumbers.is_valid_number(parsed):
-#                     country = geocoder.description_for_number(parsed, 'en')
-#                     if parsed.country_code == 84:
-#                         return None
-#                     return f"{fake_plus} / {country}"
-#             except:
-#                 continue
-
-#     # ❌ Không hợp lệ
-#     return None
 
 
 
 
-# def normalize_phone(phone):
-#     if pd.isna(phone):
-#         return ""
-
-#     # Bước 1: Làm sạch các ký tự thừa như =, +, khoảng trắng, dấu gạch nối, v.v.
-#     phone = str(phone).strip()
-#     phone = phone.replace("=", "").replace("+", "")
-#     phone = re.sub(r"[^\d]", "", phone)  # Giữ lại chỉ các chữ số
-
-#     # Bước 2: Xử lý đầu số quốc tế và loại bỏ số 0 đầu
-#     if phone.startswith("0084"):
-#         phone = phone[4:]
-#     elif phone.startswith("84") and len(phone) > 9:
-#         phone = phone[2:]
-#     elif phone.startswith("0"):
-#         phone = phone[1:]
-
-#     # Bước 3: Trả về nếu đủ 9 số
-#     if len(phone) == 9 and phone.isdigit():
-#         return phone
-#     else:
-#         return ""  # Số không hợp lệ
 
 def normalize_name(name):
     if pd.isna(name): return ""
