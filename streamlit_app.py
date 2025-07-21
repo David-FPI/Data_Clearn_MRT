@@ -234,15 +234,8 @@ if uploaded_file is not None:
             stt = row[col_stt]
 
             phone_dup = df_data.duplicated(subset=col_phone, keep="first")[idx] and phone != ""
-            email_dup = df_data.duplicated(subset=col_email, keep="first")[idx] and email != ""
+            reason = f"Trùng SĐT với dòng {first_phone_map.get(phone)}" if phone_dup else ""
 
-            reason = ""
-            if phone_dup and email_dup:
-                reason = f"Trùng SĐT với dòng {first_phone_map.get(phone)} & Trùng Email với dòng {first_email_map.get(email)}"
-            elif phone_dup:
-                reason = f"Trùng SĐT với dòng {first_phone_map.get(phone)}"
-            elif email_dup:
-                reason = f"Trùng Email với dòng {first_email_map.get(email)}"
             
             removal_reason.append(reason)
 
