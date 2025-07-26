@@ -146,9 +146,9 @@ if uploaded_file is not None:
         # 🧩 Vị trí cột trong Excel (theo index)
         # ----------------------------
         col_stt = 0
-        col_name = 4      # Họ tên KH
-        col_phone = 5      # SĐT
-        col_email = 6          # Email
+        col_name = 5      # Họ tên KH
+        col_phone = 6      # SĐT
+        col_email = 7          # Email
         col_date = 1       # Ngày đăng ký
 
         # ✅ Chuẩn hóa dữ liệu
