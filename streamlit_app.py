@@ -146,10 +146,10 @@ if uploaded_file is not None:
         # 🧩 Vị trí cột trong Excel (theo index)
         # ----------------------------
         col_stt = 0
-        col_name = 5      # Họ tên KH
-        col_phone = 6      # SĐT
-        col_email = 7          # Email
-        col_date = 1       # Ngày đăng ký
+        col_name = 3          # Họ tên KH
+        col_phone = 4      # SĐT
+        col_email = 5          # Email
+        col_date = 2       # Ngày đăng ký
 
         # ✅ Chuẩn hóa dữ liệu
         df_data[col_name] = df_data[col_name].apply(normalize_name)
